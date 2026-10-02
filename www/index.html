@@ -3,6 +3,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#4f7cff">
 <meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Daily Organizer</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -17,7 +20,7 @@ nav b{font-size:18px;padding:0 12px 16px}
 nav button{display:flex;gap:10px;align-items:center;border:0;background:none;padding:11px 12px;border-radius:12px;cursor:pointer;color:var(--mu);font-weight:600;text-align:left;transition:.15s}
 nav button:hover{background:var(--bg)}nav button.on{background:color-mix(in srgb,var(--ac) 14%,transparent);color:var(--ac)}
 main{flex:1;padding:28px;max-width:1100px;margin:auto;width:100%;min-width:0}
-.pg{animation:fi .25s ease}@keyframes fi{from{opacity:0}to{opacity:1}}
+.pg.anim{animation:fi .25s ease}@keyframes fi{from{opacity:0}to{opacity:1}}
 h1{font-size:26px;font-weight:800}h2{font-size:17px;margin:22px 0 12px}
 .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:20px}
 .mu{color:var(--mu)}.sm{font-size:13px}
@@ -103,6 +106,10 @@ dialog{width:100%;max-width:none;margin:auto 0 0;border-radius:26px 26px 0 0;pad
 .fab{bottom:calc(84px + env(safe-area-inset-bottom));right:16px}
 }
 @keyframes sheet{from{transform:translateY(40px);opacity:0}}
+
+.stat[data-a]{cursor:pointer;transition:.15s}.stat[data-a]:active{transform:scale(.97)}
+.addbar{width:100%;min-height:46px}
+@media(max-width:760px){nav b.logo{display:none}nav button{min-width:0;padding:6px 2px;font-size:11px}}
 </style></head><body>
 <nav id="nav"></nav><main id="main"></main><button class="btn fab" id="fab" data-a="quick" title="Quick add expense" style="display:none">+</button>
 <script>
@@ -163,7 +170,7 @@ togTask:id=>{const t=S.tasks.find(t=>t.id===id);t.done=!t.done;save();render()},
 delTask:id=>sure('This task will be permanently deleted.',()=>{S.tasks=S.tasks.filter(t=>t.id!==id);save();render()}),
 addNote:()=>noteForm(),editNote:id=>noteForm(S.notes.find(n=>n.id===id)),pinNote:id=>{const n=S.notes.find(n=>n.id===id);n.pin=!n.pin;save();render()},
 delNote:id=>sure('This note will be permanently deleted.',()=>{S.notes=S.notes.filter(n=>n.id!==id);save();render()}),
-pick:id=>{U.day=id;render()},day:id=>{U.day=id==='t'?today():addD(U.day,+id);render()},
+pick:id=>{U.day=id;render()},pending:()=>{U.page='prod';U.tab='tasks';U.tf='Pending';U.q='';render()},day:id=>{U.day=id==='t'?today():addD(U.day,+id);render()},
 quick:()=>S.cats.length?expForm({}):dlg('<p>Create a category first.</p>',()=>{}),
 openCat:id=>{U.cat=id;U.page='money';render()},addExp:()=>expForm({},U.cat),editExp:id=>expForm(S.tx.find(x=>x.id===id)),
 delExp:id=>sure('This expense will be permanently deleted.',()=>{S.tx=S.tx.filter(x=>x.id!==id);save();render()}),
@@ -190,7 +197,7 @@ const btn=(a,l,cls='',id='')=>`<button class="btn ${cls}" data-a="${a}" data-id=
 const ib=(a,i,id,t)=>`<button class="ib" title="${t}" data-a="${a}" data-id="${id}">${ic(EM[i]||i)}</button>`;
 const empty=(i,m)=>`<div class="empty">${ic(EMP[i]||'box')}${m}</div>`;
 const tabs=(a,cur,list)=>`<div class="tabs">${list.map(([k,l])=>`<button class="${k===cur?'on':''}" data-a="${a}" data-id="${k}">${l}</button>`).join('')}</div>`;
-const stat=(l,v)=>`<div class="card stat"><span class="mu sm">${l}</span><b>${v}</b></div>`;
+const stat=(l,v,a)=>`<div class="card stat" ${a?`data-a="${a}"`:''}><span class="mu sm">${l}</span><b>${v}</b></div>`;
 const byTime=(a,b)=>(a.date+(a.time||'99')).localeCompare(b.date+(b.time||'99'));
 const NC={none:'',yellow:'#f6c945',green:'#6fcf97',blue:'#6aa6ff',pink:'#f08fb5',purple:'#a58df0'};
 function taskRow(t){const od=!t.done&&t.date<today();return`<div class="item tk ${t.done?'done':''} p${t.pri}"><button class="ck ${t.done?'on':''}" data-a="togTask" data-id="${t.id}" title="Mark done">${t.done?ic('check2'):''}</button>
@@ -200,7 +207,7 @@ function dash(){const h=new Date().getHours(),td=today(),m=monthStart();
 const tt=S.tasks.filter(t=>t.date===td).sort(byTime),q=QUOTES[Math.floor(Date.now()/864e5)%QUOTES.length];
 return`<div class="top hero2"><div><h1>${h<12?'Good morning':h<18?'Good afternoon':'Good evening'}!</h1><div class="mu">${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div><div class="sm mu" style="margin-top:6px;font-style:italic">“${q}”</div></div>
 <div>${ib('go','🔔','','Notifications are not used yet')}${ib('go','⚙️','set','Settings')}</div></div>
-<div class="grid">${stat('Spent this month',money(sum(S.tx.filter(x=>x.date>=m))))}${stat('Spent today',money(sum(S.tx.filter(x=>x.date===td))))}${stat('Completed today',S.tasks.filter(t=>t.done&&t.date===td).length)}${stat('Pending tasks',S.tasks.filter(t=>!t.done).length)}</div>
+<div class="grid">${stat('Spent this month',money(sum(S.tx.filter(x=>x.date>=m))))}${stat('Spent today',money(sum(S.tx.filter(x=>x.date===td))))}${stat('Completed today',S.tasks.filter(t=>t.done&&t.date===td).length)}${stat('Pending tasks',S.tasks.filter(t=>!t.done).length,'pending')}</div>
 <div class="grid" style="margin-top:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
 <div class="card big" data-a="go" data-id="prod"><span class="ic">${ic('note')}</span><div><b>Productivity &amp; Planning</b><div class="mu sm">Manage your tasks, notes, and daily schedule.</div></div></div>
 <div class="card big" data-a="go" data-id="money"><span class="ic">${ic('wallet')}</span><div><b>Money Management</b><div class="mu sm">Track your spending and manage your finances.</div></div></div></div>
@@ -208,7 +215,7 @@ return`<div class="top hero2"><div><h1>${h<12?'Good morning':h<18?'Good afternoo
 ${tt.length?tt.map(taskRow).join(''):empty('🌿','Nothing scheduled today. Add a task to get started.')}`}
 
 function prod(){const td=today();let b='';
-const qa=`<div class="row qa"><input data-qa="1" placeholder="Add a task and press Enter">${btn('addTask','+ Details')}</div>`;
+const qa=`<button class="btn addbar" data-a="addTask">+ Details</button>`;
 if(U.tab==='tasks'){const tt=S.tasks.filter(t=>t.date===td),dn=tt.filter(t=>t.done).length,pc=tt.length?Math.round(dn/tt.length*100):0,od=S.tasks.filter(t=>!t.done&&t.date<td).length,up=S.tasks.filter(t=>!t.done&&t.date>td).length;
 const f={All:()=>1,Today:t=>t.date===td,Upcoming:t=>t.date>td&&!t.done,Completed:t=>t.done,Pending:t=>!t.done}[U.tf],q=U.q.toLowerCase(),l=S.tasks.filter(f).filter(t=>(t.title+t.cat).toLowerCase().includes(q)).sort(byTime);
 const G=[['Overdue',t=>!t.done&&t.date<td],['Today',t=>!t.done&&t.date===td],['Upcoming',t=>!t.done&&t.date>td],['Completed',t=>t.done]];
@@ -263,12 +270,13 @@ return`<div class="top"><h1>Settings</h1></div><div class="card"><b>Appearance</
 <label>Week starts on</label><select data-ch="ws">${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map((d,i)=>`<option value="${i}" ${i===S.set.ws?'selected':''}>${d}</option>`).join('')}</select></div>
 <div class="card" style="margin-top:14px"><b>Your data</b><div class="row wrap" style="margin-top:12px">${btn('csvTx','Export expenses (CSV)','g')}${btn('csvTasks','Export tasks (CSV)','g')}${btn('reset','Reset all data','d')}</div></div>`}
 
-function render(){document.documentElement.dataset.theme=S.set.theme;document.documentElement.dataset.ac=S.set.ac;
+let lastKey='';function render(){document.documentElement.dataset.theme=S.set.theme;document.documentElement.dataset.ac=S.set.ac;
 $('#nav').innerHTML='<b class="logo"><span>'+ic('check')+'</span>Organizer</b>'+NAV.map(([k,i,l])=>`<button class="${U.page===k?'on':''}" data-a="go" data-id="${k}">${ic(i)}${l}</button>`).join('');
 const v={dash,prod,money:money_,set:settings}[U.page]();const m=$('#main'),keep=document.activeElement?.dataset?.in;
-m.innerHTML=`<div class="pg">${v}</div>`;if(keep)m.querySelector('.pg').style.animation='none';
-$('#fab').style.display=U.page==='money'?'block':'none';scrollTo(0,keep?scrollY:0)}
+const key=[U.page,U.tab,U.mtab,U.cat].join('|'),same=key===lastKey,y=window.scrollY;m.innerHTML=`<div class="pg${same?'':' anim'}">${v}</div>`;
+$('#fab').style.display=U.page==='money'?'block':'none';scrollTo(0,same?y:0);lastKey=key}
 render();
 (function(){const A=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.App;if(!A)return;
 A.addListener('backButton',()=>{const d=document.querySelector('dialog[open]');if(d)d.close();else if(U.cat){U.cat=null;render()}else if(U.page!=='dash'){U.page='dash';render()}else A.exitApp()})})();
+if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script></body></html>
