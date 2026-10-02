@@ -110,6 +110,25 @@ dialog{width:100%;max-width:none;margin:auto 0 0;border-radius:26px 26px 0 0;pad
 .stat[data-a]{cursor:pointer;transition:.15s}.stat[data-a]:active{transform:scale(.97)}
 .addbar{width:100%;min-height:46px}
 @media(max-width:760px){nav b.logo{display:none}nav button{min-width:0;padding:6px 2px;font-size:11px}}
+
+:root{--bg:#f3f4f8}
+[data-theme=dark]{--bg:#0e1118;--card:#171b25;--bd:#252b39;--tx:#e9ecf3;--mu:#8a92a6}
+h2{font-size:16px;letter-spacing:-.01em}
+.btn{background:linear-gradient(135deg,var(--ac),color-mix(in srgb,var(--ac) 75%,#000));box-shadow:0 6px 16px color-mix(in srgb,var(--ac) 32%,transparent)}
+.btn.g{background:var(--card);box-shadow:none;border:1px solid var(--bd)}.btn.d{background:#e5534b;box-shadow:0 6px 16px #e5534b50}
+.hero2{position:relative;overflow:hidden}.hero2>*{position:relative;z-index:1}
+.hero2:before,.hero2:after{content:"";position:absolute;border-radius:50%;background:#ffffff1c}
+.hero2:before{width:170px;height:170px;right:-50px;top:-60px}.hero2:after{width:110px;height:110px;right:70px;bottom:-60px}
+.stat .chip{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;margin-bottom:12px}
+.big:after{content:"›";margin-left:auto;font-size:28px;color:var(--mu)}
+.empty{padding:36px 20px}.empty .i{width:60px;height:60px;padding:15px;border-radius:50%;background:color-mix(in srgb,var(--ac) 12%,transparent);color:var(--ac);opacity:1;stroke-width:1.6;margin-bottom:12px}
+@media(max-width:760px){
+nav{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));width:auto;padding:6px;border:0;border-radius:26px;background:color-mix(in srgb,var(--card) 90%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 10px 32px rgba(10,15,30,.2)}
+nav button{border-radius:20px}nav button.on{box-shadow:none;background:color-mix(in srgb,var(--ac) 16%,transparent)}nav .i{width:22px;height:22px}
+main{padding:16px 14px calc(108px + env(safe-area-inset-bottom))}
+.fab{bottom:calc(98px + env(safe-area-inset-bottom))}
+dialog:before{content:"";display:block;width:40px;height:4px;border-radius:9px;background:var(--bd);margin:-6px auto 14px}
+}
 </style></head><body>
 <nav id="nav"></nav><main id="main"></main><button class="btn fab" id="fab" data-a="quick" title="Quick add expense" style="display:none">+</button>
 <script>
@@ -184,8 +203,8 @@ theme:id=>{S.set.theme=id;save();render()},ac:id=>{S.set.ac=id;save();render()},
 reset:()=>sure('All tasks, notes, categories, expenses and settings will be erased. This cannot be undone.',()=>{localStorage.removeItem(KEY);S=load();U.page='dash';render()},'Reset everything'),
 csvTx:()=>csv('expenses',['Date','Time','Category','Description','Amount','Notes'],S.tx.map(x=>[x.date,x.time,cat(x.cat).name,x.desc,x.amt,x.notes])),
 csvTasks:()=>csv('tasks',['Title','Due','Time','Priority','Category','Done'],S.tasks.map(t=>[t.title,t.date,t.time,t.pri,t.cat,t.done?'yes':'no']))};
-async function csv(name,h,rows){const q=v=>`"${String(v??'').replace(/"/g,'""')}"`,txt='\ufeff'+[h,...rows].map(r=>r.map(q).join(',')).join('\n'),C=window.Capacitor,P=C&&C.Plugins;
-if(C&&C.isNativePlatform&&C.isNativePlatform()&&P.Filesystem&&P.Share){try{const f=await P.Filesystem.writeFile({path:name+'.csv',data:txt,directory:'CACHE',encoding:'utf8'});await P.Share.share({title:name,url:f.uri})}catch(e){dlg('<p>The file could not be exported.</p>',()=>{})}return}
+async function csv(name,h,rows){const q=v=>`"${String(v??'').replace(/"/g,'""')}"`,txt='\ufeff'+[h,...rows].map(r=>r.map(q).join(',')).join('\n'),C=window.Capacitor;
+if(C&&C.isNativePlatform&&C.isNativePlatform()){try{const F=C.registerPlugin('Filesystem'),Sh=C.registerPlugin('Share'),f=await F.writeFile({path:name+'.csv',data:txt,directory:'CACHE',encoding:'utf8'});await Sh.share({title:name,url:f.uri})}catch(e){dlg('<p>The file could not be exported.</p>',()=>{})}return}
 const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/csv'}));a.download=name+'.csv';a.click()}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b&&act[b.dataset.a])act[b.dataset.a](b.dataset.id)});
 document.addEventListener('input',e=>{const k=e.target.dataset.in;if(!k)return;U[k]=e.target.value;const p=e.target.selectionStart;render();const n=$(`[data-in=${k}]`);if(n){n.focus();n.setSelectionRange(p,p)}});
@@ -197,7 +216,8 @@ const btn=(a,l,cls='',id='')=>`<button class="btn ${cls}" data-a="${a}" data-id=
 const ib=(a,i,id,t)=>`<button class="ib" title="${t}" data-a="${a}" data-id="${id}">${ic(EM[i]||i)}</button>`;
 const empty=(i,m)=>`<div class="empty">${ic(EMP[i]||'box')}${m}</div>`;
 const tabs=(a,cur,list)=>`<div class="tabs">${list.map(([k,l])=>`<button class="${k===cur?'on':''}" data-a="${a}" data-id="${k}">${l}</button>`).join('')}</div>`;
-const stat=(l,v,a)=>`<div class="card stat" ${a?`data-a="${a}"`:''}><span class="mu sm">${l}</span><b>${v}</b></div>`;
+const SI={'Spent this month':['wallet','#4f7cff'],'Spent today':['clock','#ee8a45'],'Completed today':['check','#3aa76d'],'Pending tasks':['list','#e59a2b'],'Today':['clock','#ee8a45'],'This week':['calendar','#2aa5a0'],'This month':['calendar','#4f7cff'],'All time':['wallet','#8a6fd6'],'Total in category':['wallet','#4f7cff'],'Shown below':['receipt','#2aa5a0']};
+const stat=(l,v,a)=>{const[i,c]=SI[l]||['box','#4f7cff'];return`<div class="card stat" ${a?`data-a="${a}"`:''}><div class="chip" style="background:${c}1f;color:${c}">${ic(i)}</div><span class="mu sm">${l}</span><b>${v}</b></div>`};
 const byTime=(a,b)=>(a.date+(a.time||'99')).localeCompare(b.date+(b.time||'99'));
 const NC={none:'',yellow:'#f6c945',green:'#6fcf97',blue:'#6aa6ff',pink:'#f08fb5',purple:'#a58df0'};
 function taskRow(t){const od=!t.done&&t.date<today();return`<div class="item tk ${t.done?'done':''} p${t.pri}"><button class="ck ${t.done?'on':''}" data-a="togTask" data-id="${t.id}" title="Mark done">${t.done?ic('check2'):''}</button>
@@ -276,7 +296,10 @@ const v={dash,prod,money:money_,set:settings}[U.page]();const m=$('#main'),keep=
 const key=[U.page,U.tab,U.mtab,U.cat].join('|'),same=key===lastKey,y=window.scrollY;m.innerHTML=`<div class="pg${same?'':' anim'}">${v}</div>`;
 $('#fab').style.display=U.page==='money'?'block':'none';scrollTo(0,same?y:0);lastKey=key}
 render();
-(function(){const A=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.App;if(!A)return;
-A.addListener('backButton',()=>{const d=document.querySelector('dialog[open]');if(d)d.close();else if(U.cat){U.cat=null;render()}else if(U.page!=='dash'){U.page='dash';render()}else A.exitApp()})})();
+function goBack(){const d=document.querySelector('dialog[open]');if(d){d.close();return true}
+if(U.cat){U.cat=null;render();return true}
+if(U.page!=='dash'){U.page='dash';render();return true}return false}
+(function(){const C=window.Capacitor;if(!C||!C.registerPlugin||!(C.isNativePlatform&&C.isNativePlatform()))return;
+try{const A=C.registerPlugin('App');A.addListener('backButton',()=>{if(!goBack())A.exitApp()})}catch(e){}})();
 if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script></body></html>
