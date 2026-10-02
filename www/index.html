@@ -160,7 +160,7 @@ const NAV=[['dash','home','Home'],['prod','list','Plan'],['money','wallet','Mone
 /* ---------- dialogs ---------- */
 function dlg(html,ok,label='Save',danger){const d=document.createElement('dialog');
 d.innerHTML=`<form method="dialog">${html}<div class="err" id="er"></div><div class="row" style="justify-content:flex-end;margin-top:18px"><button type="button" class="btn g" value="x">Cancel</button><button class="btn ${danger?'d':''}">${label}</button></div></form>`;
-document.body.append(d);d.showModal();d.querySelector('[value=x]').onclick=()=>d.close();d.onclose=()=>d.remove();
+document.body.append(d);d.showModal();d.querySelector('[value=x]').onclick=()=>d.close();history.pushState(snap(),'');d.onclose=()=>{d.remove();if(d.dataset.hp!=='1'){skip++;history.back()}};
 d.querySelector('form').onsubmit=e=>{e.preventDefault();const r=ok(d);if(r&&r.err)d.querySelector('#er').textContent=r.err;else d.close()}}
 function sure(msg,fn,label='Delete'){dlg(`<h2 style="margin-top:0">Are you sure?</h2><p class="mu">${msg}</p>`,()=>{fn()},label,true)}
 function form(title,fields,v,cb){let h=`<h2 style="margin-top:0">${title}</h2>`;
@@ -288,18 +288,20 @@ return`<div class="top"><h1>Settings</h1></div><div class="card"><b>Appearance</
 <div class="row">${sw.map(([k,c])=>`<div class="sw ${S.set.ac===k?'on':''}" style="background:${c}" data-a="ac" data-id="${k}" title="${k}"></div>`).join('')}</div></div>
 <div class="card" style="margin-top:14px"><b>Preferences</b><label>Currency</label><select data-ch="cur">${['MAD','USD','EUR','GBP','SAR','AED','DZD','TND'].map(c=>`<option ${c===S.set.cur?'selected':''}>${c}</option>`).join('')}</select>
 <label>Week starts on</label><select data-ch="ws">${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map((d,i)=>`<option value="${i}" ${i===S.set.ws?'selected':''}>${d}</option>`).join('')}</select></div>
-<div class="card" style="margin-top:14px"><b>Your data</b><div class="row wrap" style="margin-top:12px">${btn('csvTx','Export expenses (CSV)','g')}${btn('csvTasks','Export tasks (CSV)','g')}${btn('reset','Reset all data','d')}</div></div>`}
+<div class="card" style="margin-top:14px"><b>Your data</b><div class="row wrap" style="margin-top:12px">${btn('csvTx','Export expenses (CSV)','g')}${btn('csvTasks','Export tasks (CSV)','g')}${btn('reset','Reset all data','d')}</div></div><div class="sm mu" style="text-align:center;margin-top:18px">Daily Organizer v1.4</div>`}
 
+let hd=0,skip=0,popping=false;
+const depth=()=>U.page==='dash'?0:(U.page==='money'&&U.cat)?2:1,snap=()=>({page:U.page,cat:U.cat});
+function histSync(){const d=depth();if(d>hd)history.pushState(snap(),'');else if(d===hd)history.replaceState(snap(),'');else{skip++;history.go(d-hd)}hd=d}
+history.replaceState(snap(),'');
+addEventListener('popstate',e=>{if(skip>0){skip--;return}
+const dl=document.querySelector('dialog[open]');if(dl){dl.dataset.hp='1';dl.close();return}
+const st=e.state;if(!st)return;U.page=st.page;U.cat=st.cat;hd=depth();popping=true;render();popping=false});
 let lastKey='';function render(){document.documentElement.dataset.theme=S.set.theme;document.documentElement.dataset.ac=S.set.ac;
 $('#nav').innerHTML='<b class="logo"><span>'+ic('check')+'</span>Organizer</b>'+NAV.map(([k,i,l])=>`<button class="${U.page===k?'on':''}" data-a="go" data-id="${k}">${ic(i)}${l}</button>`).join('');
 const v={dash,prod,money:money_,set:settings}[U.page]();const m=$('#main'),keep=document.activeElement?.dataset?.in;
-const key=[U.page,U.tab,U.mtab,U.cat].join('|'),same=key===lastKey,y=window.scrollY;m.innerHTML=`<div class="pg${same?'':' anim'}">${v}</div>`;
+const key=[U.page,U.tab,U.mtab,U.cat].join('|'),same=key===lastKey,y=window.scrollY;if(!same&&!popping)histSync();m.innerHTML=`<div class="pg${same?'':' anim'}">${v}</div>`;
 $('#fab').style.display=U.page==='money'?'block':'none';scrollTo(0,same?y:0);lastKey=key}
 render();
-function goBack(){const d=document.querySelector('dialog[open]');if(d){d.close();return true}
-if(U.cat){U.cat=null;render();return true}
-if(U.page!=='dash'){U.page='dash';render();return true}return false}
-(function(){const C=window.Capacitor;if(!C||!C.registerPlugin||!(C.isNativePlatform&&C.isNativePlatform()))return;
-try{const A=C.registerPlugin('App');A.addListener('backButton',()=>{if(!goBack())A.exitApp()})}catch(e){}})();
 if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script></body></html>
